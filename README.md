@@ -1,8 +1,29 @@
 [![GitHub issues](https://img.shields.io/github/issues/EleutherAI/gpt-neox)](https://github.com/EleutherAI/gpt-neox/issues)
 [<img src="https://raw.githubusercontent.com/wandb/assets/main/wandb-github-badge-28.svg" alt="Weights & Biases monitoring" height=20>](https://wandb.ai/eleutherai/neox)
 
-# GPT-NeoX
 
+# A modified version for PolyCoder code pretraining
+## Perplexity evaluation
+Mainly uses `configs/code_ppl.yml`.
+
+```
+./deepy.py evaluate.py -d checkpoints-2-7B/configs 2-7B.yml code_ppl.yml
+```
+## HumanEval evaluation
+Mainly uses `configs/humaneval_generation.yml`.
+
+```
+./deepy.py generate.py -d checkpoints-2-7B/configs 2-7B.yml humaneval_generation.yml
+```
+Then you will find generated samples for the HumanEval dataset in your specified output filename.
+
+Then:
+
+```
+./human_eval.py
+```
+
+# GPT-NeoX
 This repository records [EleutherAI](https://www.eleuther.ai)'s work-in-progress for training large-scale language models on GPUs. Our current framework is based on NVIDIA's [Megatron Language Model](https://github.com/NVIDIA/Megatron-LM) and has been augmented with techniques from [DeepSpeed](https://www.deepspeed.ai) as well as some novel optimizations.
 
 We aim to make this repo a centralized and accessible place to gather techniques for training large-scale autoregressive language models, and accelerate research into large-scale training. Additionally, we hope to train and open source a 175B parameter GPT-3 replication along the way. Please note, however, that this is a research codebase that is primarily designed for performance over ease of use. We endeavour to make it as easy to use as is feasible, but if there's anything in the readme that is unclear or you think you've found a bug, please open an issue.

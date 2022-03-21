@@ -19,6 +19,7 @@ from megatron.utils import print_rank_0, setup_for_inference_or_eval
 
 from megatron.text_generation_utils import (
     generate_samples_input_from_file,
+    generate_samples_humaneval,
     generate_samples_from_prompt,
     generate_samples_unconditional,
     generate_samples_interactive,
@@ -59,6 +60,21 @@ def main():
             neox_args=neox_args,
             model=model,
             input_file=neox_args.sample_input_file,
+            output_file=neox_args.sample_output_file,
+            maximum_tokens=neox_args.maximum_tokens,
+            recompute=neox_args.recompute,
+            temperature=neox_args.temperature,
+            top_k=neox_args.top_k,
+            top_p=neox_args.top_p,
+        )
+    
+    elif neox_args.text_gen_type == "humaneval":
+        print_rank_0(
+            f"Generating samples for HumanEval test set"
+        )
+        generate_samples_humaneval(
+            neox_args=neox_args,
+            model=model,
             output_file=neox_args.sample_output_file,
             maximum_tokens=neox_args.maximum_tokens,
             recompute=neox_args.recompute,

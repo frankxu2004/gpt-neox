@@ -1,3 +1,8 @@
+testsamples/
+data/wikitext/
+*.output.jsonl
+eval_results*.json
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

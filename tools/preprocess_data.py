@@ -18,6 +18,7 @@ import argparse
 import multiprocessing
 import os
 import sys
+import random
 
 import lm_dataformat as lmd
 
@@ -143,22 +144,33 @@ def get_args():
     return args
 
 
-def yield_from_files(fnames: list, semaphore):
+def yield_from_files(dir, semaphore):
     """
+    Modified for reading code corpus.
+
     Iterator over input documents using lm_dataformat. Should be able to handle jsons / texts /
     other compressed formats. Also filters out empty documents.
 
     :param fnames: list of filenames
     """
+    fnames = []
+    for root, _, files in os.walk(dir):
+        for file in files:
+            fnames.append(os.path.join(root, file))
+    random.shuffle(fnames)
+
+    def read(fname):
+        with open(fname) as inp:
+            doc = inp.read()
+        return doc
 
     def yielder(fname, semaphore):
-        for f in filter(lambda x: x, lmd.Reader(fname).stream_data()):
+        f = read(fname)
+        if f:
             semaphore.acquire()
             yield f
 
     for fname in fnames:
-        semaphore.acquire()
-
         yield from yielder(fname, semaphore)
 
 
@@ -174,7 +186,8 @@ def main():
     semaphore = Semaphore(10000 + args.workers)
 
     # use multiprocessing to iterate over input documents
-    fin = yield_from_files(args.input.split(","), semaphore)
+    # modified to read code documents
+    fin = yield_from_files(args.input, semaphore)
 
     if args.workers > 1:
         pool = multiprocessing.Pool(args.workers, initializer=encoder.initializer)
@@ -188,7 +201,7 @@ def main():
     output_bin_files = {}
     output_idx_files = {}
     builders = {}
-    for key in args.jsonl_keys:
+    for key in ("text",): #args.jsonl_keys: modified for code corpus
         output_bin_files[key] = "{}_{}_{}.bin".format(
             args.output_prefix, key, "document"
         )

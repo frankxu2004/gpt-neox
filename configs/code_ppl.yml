@@ -1,0 +1,21 @@
+{
+  # code model vocab files
+  "vocab-file": "data/code-vocab.json",
+  "merge-file": "data/code-merges.txt",
+  # include to specify GPUs used
+  "include": "localhost:9",
+  "global_num_gpus": 1,
+
+  # multiprocessing master port
+  "master_port": 28000,
+
+  "eval_tasks": ["code_python", "code_c++", "code_c#", "code_c", "code_php", "code_go", "code_scala", "code_java", "code_javascript", "code_typescript", "code_ruby", "code_rust"],
+
+  # load code model checkpoint folder
+  "load": "checkpoints-2-7B",
+  "checkpoint_validation_with_forward_pass": False,
+  
+  "tensorboard-dir": "tensorboard",
+  "log-dir": "logs",
+  "use_wandb": false,
+}
