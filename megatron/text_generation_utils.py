@@ -21,6 +21,8 @@ import json
 import os
 import time
 from typing import List, Union
+from re import split
+
 
 import torch
 import torch.nn.functional as F
@@ -363,7 +365,7 @@ def stream_tokens(
                 generated_tokens == eos_token_id
             ).byte() & state_started.byte()  # check which batch items produce an eos_token in the current iteration
             state_just_finished = (state_done & ~state_is_done).bool()
-            state_is_done = state_is_done | state_done
+            state_is_done = state_is_done | state_just_finished
             stop_tokens_produced = torch.zeros_like(state_is_done)
             for batch_idx, ctx in enumerate(context_tokens):
                 stop_tokens_produced[batch_idx] = stop_tokens_in_completion(
@@ -526,6 +528,8 @@ def generate_samples_from_prompt(
                     "duration_seconds": float(time.time() - start_time),
                 }
                 generated_texts.append(data)
+                if len(generated_texts) % 1000 == 0:
+                    print_rank_0("generated: ", len(generated_texts))
 
     return generated_texts
 
@@ -577,8 +581,10 @@ def generate_samples_input_from_file(
     print_rank_0(
         "generate_samples_input_from_file() loading input from {}".format(input_file)
     )
+
     with open(input_file, "r") as f:
-        prompts = f.readlines()
+        prompts = (f.read(),)  # NOTE: replaced with a whole-file read for code generation.
+    prompts = [prompts[0] for _ in range(neox_args.num_samples)]
     prompts = [p.strip() for p in prompts]
     prompts = [p for p in prompts if len(p) > 0]
     print_rank_0(
@@ -588,6 +594,100 @@ def generate_samples_input_from_file(
     if is_mp_rank_0():
         if output_file is None:
             output_file = str(input_file) + ".output.jsonl"
+            print_rank_0(
+                "generate_samples_input_from_file() setting default output file to {}".format(
+                    output_file
+                )
+            )
+
+    print_rank_0("generate_samples_input_from_file() generating...")
+    generated_texts = generate_samples_from_prompt(
+        neox_args=neox_args,
+        model=model,
+        text=prompts,
+        eos_token_id=eos_token_id,
+        maximum_tokens=maximum_tokens,
+        recompute=recompute,
+        temperature=temperature,
+        top_k=top_k,
+        top_p=top_p,
+    )
+
+    if is_mp_rank_0():
+        with open(output_file, "w") as f_out:
+            for item in generated_texts:
+                f_out.write(json.dumps(item) + "\n")
+    print_rank_0("generate_samples_input_from_file() done")
+    return generated_texts
+
+
+def generate_samples_humaneval(
+    neox_args,
+    model,
+    output_file=None,
+    eos_token_id: int = None,
+    maximum_tokens: int = 64,
+    recompute: bool = False,
+    temperature: float = 0.0,
+    top_k: int = 0,
+    top_p: float = 0.0,
+):
+    """
+    Generates samples for the test set of HumanEval dataset (for code generation) and writes them to an output file.
+
+    Reads prompts and writes completions to neox_args.sample_output_file
+
+    neox_args: NeoXArgs.
+    model: a Megatron model
+
+    output_file: file where generation results are to be stored in jsonl format. defaults to input_file+'.output.jsonl' if not defined
+
+    eos_token_id: end of text token at which completion is terminated, even if max_tokes count has not been reached
+    maximum_tokens: maximum number of tokens to be generated
+
+    recompute: flag indicating whether a cache is used for already forwarded tokens (true) or whether all tokens are recomputed at every iteration (false)
+
+    temperature (default 0.0): exponential scaling output distribution ("higher == more risk")
+    top_k (default 0): integer -> integer between 0 and the models vocab size. Filters out any logits with a probability less than that of the top_kth token.
+    top_p (default 0.0): float -> Top-p (nucleus) sampling chooses from the smallest possible set of tokens whose cumulative probability exceeds the probability top_p.
+
+    note: greedy decoding is used if temperature is 0.0, top_k is 0 and top_p is 0.0
+
+
+    returns: List[dict] -> a list of dicts containing the following fields:
+        - 'context' (the input)
+        - 'text' (the completion)
+        - 'length' (the length of the completion in number of tokens)
+        - 'finished':
+        - 'message': a messaged associated with the generation procedure, can be a warning or error
+        - 'duration_seconds': duration of the generation in seconds
+    """
+    # Read the sample file
+    print_rank_0(
+        "generate_samples_humaneval()"
+    )
+
+    # Use huggingface datasets
+    from datasets import load_dataset
+
+    # Load evaluation dataset and metric
+    human_eval = load_dataset("openai_humaneval")
+
+    # Generate completions for evaluation set
+    n_tasks = len(human_eval["test"])
+
+    prompts = []
+    for task in range(n_tasks):
+        prompt = human_eval["test"][task]["prompt"].strip()
+        prompts.extend([prompt] * neox_args.num_samples)
+
+    print_rank_0(
+        "generate_samples_humaneval() prompts loaded: {}".format(len(prompts))
+    )
+
+    if is_mp_rank_0():
+        if output_file is None:
+            output_file = "humaneval_sample" + str(neox_args.num_samples) + ".output.jsonl"
             print_rank_0(
                 "generate_samples_input_from_file() setting default output file to {}".format(
                     output_file
@@ -723,7 +823,7 @@ def generate_samples_interactive(
 
         if torch.distributed.is_initialized() and torch.distributed.get_rank() == 0:
             os.system("clear")
-            raw_text = input("Context prompt >>> ")
+            raw_text = input("Context prompt >>> ").replace('\\n', '\n').replace('\\t', '\t')
             context_tokens = neox_args.tokenizer.tokenize(raw_text)
             if len(context_tokens) == 0:
                 context_tokens = [neox_args.tokenizer.eod]

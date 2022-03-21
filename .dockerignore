@@ -1,0 +1,4 @@
+data/
+tensorboard/
+checkpoints/
+checkpoints-large-undup/

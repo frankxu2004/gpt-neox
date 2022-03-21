@@ -1,0 +1,33 @@
+# Parameters used for HumanEval generation
+{
+  "text-gen-type": "humaneval", 
+ 
+  # Params for HumanEval generation
+  "maximum_tokens": 256,
+  "temperature": 0.4,
+  "top_p": 0.95,
+  "top_k": 0,
+  "recompute": false,
+  
+  # `unconditional`/`input-file`: samples
+  "num-samples": 100,
+
+  # output file
+  "sample-output-file": "2.7b-humaneval-outputs.jsonl",
+
+  # code model vocab files  
+  "vocab-file": "data/code-vocab.json",
+  "merge-file": "data/code-merges.txt",
+
+  "include": "localhost:8",
+  "master_port": 29100,
+
+  "load": "checkpoints-2-7B",
+  "checkpoint_validation_with_forward_pass": False,
+  
+  "tensorboard-dir": "tensorboard",
+  "log-dir": "logs",
+  "use_wandb": True,
+  "wandb_host": "https://api.wandb.ai",
+  "wandb_project": "neox",
+}
