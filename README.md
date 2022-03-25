@@ -20,7 +20,7 @@ Then you will find generated samples for the HumanEval dataset in your specified
 Then:
 
 ```
-./human_eval.py
+./human_eval.py --generated-file generated_samples.jsonl --num-samples 100
 ```
 
 # GPT-NeoX
