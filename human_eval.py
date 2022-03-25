@@ -2,9 +2,29 @@ import json
 import multiprocessing
 import os
 import re
+import argparse
+import sys
 
 from datasets import load_dataset, load_metric
 from tqdm import tqdm
+
+def get_parser():
+    parser = argparse.ArgumentParser(
+        description="HumanEval based on generated samples",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument(
+        "--generated-file",
+        type=str,
+        help="Generated .jsonl file",
+    )
+    parser.add_argument(
+        "--num-samples",
+        type=int,
+        default=100,
+        help="Number of samples generated per prompt",
+    )
+    return parser
 
 
 def first_block(string):
@@ -13,6 +33,9 @@ def first_block(string):
 
 
 def main():
+    parser = get_parser()
+    args = parser.parse_args()
+
     # enables code execution in code_eval metric
     os.environ["HF_ALLOW_CODE_EVAL"] = "1"
 
@@ -22,9 +45,9 @@ def main():
     human_eval = load_dataset("openai_humaneval")
     code_eval_metric = load_metric("code_eval")
     
-    num_gen_per_task = 100
+    num_gen_per_task = args.num_samples
     generated_all = []
-    with open('0.4b-150k-0.8.output.jsonl') as generated_file:
+    with open(args.generated_file) as generated_file:
         for line in generated_file:
             generated_all.append(json.loads(line.strip()))
     
@@ -33,10 +56,10 @@ def main():
     generations, references = [], []
     for task in tqdm(range(n_tasks)):
         task_generations = []
-        prompt = human_eval["test"][task]["prompt"].strip()
+        prompt = human_eval["test"][task]["prompt"]
 
         for sample in generated_all[task*num_gen_per_task:(task+1)*num_gen_per_task]:
-            assert sample['context'] == prompt
+            assert sample['context'] == prompt.strip()
             task_generations.append(prompt + first_block(sample['text']))
 
         generations.append(task_generations)
