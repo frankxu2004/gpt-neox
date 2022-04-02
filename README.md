@@ -9,6 +9,9 @@ Mainly uses `configs/code_ppl.yml`.
 ```
 ./deepy.py evaluate.py -d checkpoints-2-7B/configs 2-7B.yml code_ppl.yml
 ```
+
+To evaluate other pretrained models hosted on HuggingFace, please refer to our other [library](https://github.com/frankxu2004/lm-evaluation-harness). 
+
 ## HumanEval evaluation
 Mainly uses `configs/humaneval_generation.yml`.
 
