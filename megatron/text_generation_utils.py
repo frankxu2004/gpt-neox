@@ -238,9 +238,10 @@ def stream_tokens(
     # convert to tensor and broadcast
     context_tokens = torch.cuda.LongTensor(context_tokens)
     if stop_tokens:
-        stop_tokens = torch.cuda.LongTensor(stop_tokens)
-        if stop_tokens.ndim == 1:
-            stop_tokens = stop_tokens.unsqueeze(0)
+        if len(stop_tokens) > 0 and type(stop_tokens[0]) is not list:
+            stop_tokens = [stop_tokens]
+        for i in range(0, len(stop_tokens)):
+            stop_tokens[i] = torch.cuda.LongTensor(stop_tokens[i])
 
     # Make sure context tokens + start tokens are the same across all ranks
     token_generation_start_index = torch.cuda.LongTensor(context_lengths)
@@ -866,7 +867,7 @@ def generate_samples_interactive(
                     .tolist()[
                         batch_token_generation_start_index[0]
                         .item() : batch_token_generation_end_index[0]
-                        .item()
+                        .item() + 1
                     ]
                 )
                 generated_text = neox_args.tokenizer.detokenize(generated_tokens)
