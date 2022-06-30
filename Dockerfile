@@ -91,6 +91,8 @@ COPY megatron /gpt-neox/megatron
 RUN python3 /gpt-neox/megatron/fused_kernels/setup.py install
 COPY *.py /gpt-neox
 COPY configs /gpt-neox/configs
+COPY eval_tasks /gpt-neox/eval_tasks
+COPY tools /gpt-neox/tools
 
 # Clear staging
 RUN mkdir -p /tmp && chmod 0777 /tmp
